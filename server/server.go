@@ -59,17 +59,23 @@ func handleConnection(conn net.Conn) {
 		}
 
 		var result float64
+		var valid bool
 		switch operation {
 		case "somar":
-			result = sum(numbers)
+			result, valid = sum(numbers)
 		case "subtrair":
-			result = subtract(numbers)
+			result, valid = subtract(numbers)
 		case "multiplicar":
-			result = multiply(numbers)
+			result, valid = multiply(numbers)
 		case "dividir":
-			result = divide(numbers)
+			result, valid = divide(numbers)
 		default:
 			conn.Write([]byte("Erro: Operação inválida\n"))
+			continue
+		}
+
+		if !valid {
+			conn.Write([]byte("Erro: Entrada inválida\n"))
 			continue
 		}
 
@@ -77,46 +83,61 @@ func handleConnection(conn net.Conn) {
 	}
 }
 
-func sum(numbers []string) float64 {
+func sum(numbers []string) (float64, bool) {
 	var result float64
 	for _, num := range numbers {
-		n, _ := strconv.ParseFloat(num, 64)
+		n, err := strconv.ParseFloat(num, 64)
+		if err != nil {
+			return 0, false
+		}
 		result += n
 	}
-	return result
+	return result, true
 }
 
-func subtract(numbers []string) float64 {
+func subtract(numbers []string) (float64, bool) {
 	var result float64
 	for i, num := range numbers {
-		n, _ := strconv.ParseFloat(num, 64)
+		n, err := strconv.ParseFloat(num, 64)
+		if err != nil {
+			return 0, false
+		}
 		if i == 0 {
 			result = n
 		} else {
 			result -= n
 		}
 	}
-	return result
+	return result, true
 }
 
-func multiply(numbers []string) float64 {
+func multiply(numbers []string) (float64, bool) {
 	result := 1.0
 	for _, num := range numbers {
-		n, _ := strconv.ParseFloat(num, 64)
+		n, err := strconv.ParseFloat(num, 64)
+		if err != nil {
+			return 0, false
+		}
 		result *= n
 	}
-	return result
+	return result, true
 }
 
-func divide(numbers []string) float64 {
+func divide(numbers []string) (float64, bool) {
 	var result float64
 	for i, num := range numbers {
-		n, _ := strconv.ParseFloat(num, 64)
+		n, err := strconv.ParseFloat(num, 64)
+		if err != nil {
+			return 0, false
+		}
 		if i == 0 {
 			result = n
 		} else {
+			if n == 0 {
+				return 0, false
+			}
 			result /= n
 		}
 	}
-	return result
+	return result, true
 }
