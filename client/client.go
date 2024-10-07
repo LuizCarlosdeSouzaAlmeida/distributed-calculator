@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"net"
-
 	"strings"
 
 	ui "github.com/gizak/termui/v3"
@@ -82,7 +81,15 @@ func main() {
 					break
 				}
 				if e.Type == ui.KeyboardEvent {
-					input.Text += e.ID
+					if e.ID == "<Space>" {
+						input.Text += " "
+					} else if e.ID == "<Backspace>" {
+						if len(input.Text) > 0 {
+							input.Text = input.Text[:len(input.Text)-1]
+						}
+					} else {
+						input.Text += e.ID
+					}
 					ui.Render(input)
 				}
 			}
