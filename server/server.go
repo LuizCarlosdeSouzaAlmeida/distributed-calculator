@@ -31,6 +31,9 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
+	operations := []string{"somar", "subtrair", "multiplicar", "dividir"}
+	conn.Write([]byte(strings.Join(operations, ",") + "\n"))
+
 	reader := bufio.NewReader(conn)
 	for {
 		request, err := reader.ReadString('\n')
