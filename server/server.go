@@ -38,12 +38,17 @@ func handleConnection(conn net.Conn) {
 	for {
 		request, err := reader.ReadString('\n')
 		if err != nil {
-			log.Printf("Erro ao ler requisição: %v", err)
+			if err.Error() == "EOF" {
+				log.Println("Conexão fechada pelo cliente")
+			} else {
+				log.Printf("Erro ao ler requisição: %v", err)
+			}
 			return
 		}
 
 		request = strings.TrimSpace(request)
 		if request == "" {
+			log.Println("Requisição vazia recebida")
 			continue
 		}
 
