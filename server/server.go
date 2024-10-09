@@ -31,10 +31,31 @@ func main() {
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
-	operations := []string{"somar", "subtrair", "multiplicar", "dividir"}
-	conn.Write([]byte(strings.Join(operations, ",") + "\n"))
-
 	reader := bufio.NewReader(conn)
+
+	// Lê a mensagem inicial do cliente
+	initialMessage, err := reader.ReadString('\n')
+	if err != nil {
+		log.Printf("Erro ao ler mensagem inicial: %v", err)
+		return
+	}
+
+	initialMessage = strings.TrimSpace(initialMessage)
+
+	switch initialMessage {
+	case "list":
+		// Envia a lista de operações disponíveis
+		operations := []string{"somar", "subtrair", "multiplicar", "dividir"}
+		conn.Write([]byte(strings.Join(operations, ",") + "\n"))
+		return
+	case "operation":
+		// Continua para o processamento de operações
+	default:
+		conn.Write([]byte("Erro: Comando inicial inválido\n"))
+		log.Printf("Comando inicial inválido recebido: %s", initialMessage)
+		return
+	}
+
 	for {
 		request, err := reader.ReadString('\n')
 		if err != nil {
