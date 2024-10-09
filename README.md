@@ -78,6 +78,24 @@ O cliente se conectará ao servidor e exibirá um menu com as operações dispon
 3. **Obtenha o Resultado**: O cliente enviará a operação e os números para o servidor, que processará a operação e retornará o resultado.
 4. **Sair**: Para sair do cliente, selecione a opção "5. Sair" no menu.
 
+## Configuração do IP do Servidor
+
+O cliente está configurado para se conectar ao servidor no endereço `3.225.60.216:15000`. Se você estiver executando o servidor localmente ou em um endereço diferente, você pode modificar o IP do servidor no arquivo `client/main.go`.
+
+### Modificando o IP do Servidor
+
+Abra o arquivo `client/main.go` e localize a constante `serverIP`:
+
+```go
+const serverIP = "3.225.60.216:15000"
+```
+
+Altere o valor da constante `serverIP` para o endereço do servidor que você está usando. Por exemplo, se o servidor estiver em execução localmente, você pode alterar para:
+
+```go
+const serverIP = "localhost:15000"
+```
+
 ## Exemplo de Uso
 
 1. **Selecione a Operação**:
@@ -93,7 +111,7 @@ O cliente se conectará ao servidor e exibirá um menu com as operações dispon
 ## Considerações Finais
 
 - Certifique-se de que o servidor esteja em execução antes de iniciar o cliente.
-- O cliente se conecta ao servidor no endereço `18.208.231.110:15000`. Se o servidor estiver em execução localmente, você pode modificar o endereço no código do cliente para `localhost:15000`.
+- O cliente se conecta ao servidor no endereço definido na constante `serverIP`. Se o servidor estiver em execução localmente, você pode modificar o endereço no código do cliente para `localhost:15000`.
 
 ## Contribuição
 
