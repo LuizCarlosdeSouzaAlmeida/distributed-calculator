@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
-	"time"
 	"unicode"
 
 	ui "github.com/gizak/termui/v3"
@@ -16,6 +16,14 @@ import (
 const serverIP = "3.225.60.216:15000"
 
 func main() {
+	// Configura o logger para escrever em client.log
+	logFile, err := os.OpenFile("client.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Erro ao abrir o arquivo de log: %v", err)
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+
 	if err := ui.Init(); err != nil {
 		log.Fatalf("Erro ao inicializar termui: %v", err)
 	}
@@ -93,6 +101,9 @@ func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.P
 		result.Text = res
 	}
 	ui.Render(result)
+
+	// Aguarda confirmação do usuário antes de reiniciar o fluxo
+	confirmRestart(menu, input, result, uiEvents)
 }
 
 func getOperation(choice string) string {
@@ -127,7 +138,7 @@ func handleKeyboardEvent(input *widgets.Paragraph, e ui.Event) {
 		if len(input.Text) > 0 {
 			input.Text = input.Text[:len(input.Text)-1]
 		}
-	} else if len(e.ID) == 1 && (unicode.IsDigit(rune(e.ID[0])) || e.ID[0] == ' ') {
+	} else if len(e.ID) == 1 && (unicode.IsDigit(rune(e.ID[0])) || e.ID[0] == '.' || e.ID[0] == '-') {
 		input.Text += e.ID
 	}
 }
@@ -135,31 +146,39 @@ func handleKeyboardEvent(input *widgets.Paragraph, e ui.Event) {
 func sendRequest(operation, numbers string) (string, error) {
 	conn, err := net.Dial("tcp", serverIP)
 	if err != nil {
+		log.Printf("Erro ao conectar ao servidor: %v", err)
 		return "", err
 	}
 	defer conn.Close()
+
+	// Envia a mensagem inicial indicando que deseja realizar uma operação
+	_, err = conn.Write([]byte("operation\n"))
+	if err != nil {
+		log.Printf("Erro ao enviar mensagem inicial: %v", err)
+		return "", err
+	}
 
 	// Envia a operação e os números para o servidor
 	request := fmt.Sprintf("%s %s\n", operation, numbers)
 	_, err = conn.Write([]byte(request))
 	if err != nil {
+		log.Printf("Erro ao enviar requisição: %v", err)
 		return "", err
 	}
+	log.Printf("Requisição enviada: %s", request)    // Log para depuração
+	log.Printf("Aguardando resposta do servidor...") // Log para depuração
 
 	// Lê a resposta do servidor
 	response, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
+		log.Printf("Erro ao ler resposta: %v", err)
 		return "", err
 	}
 
 	// Remove o prefixo "Resultado: " da resposta
+	log.Printf("Resposta do servidor: %s", response) // Log para depuração
 	response = strings.TrimPrefix(response, "Resultado: ")
 	response = strings.TrimSpace(response)
-
-	log.Printf("Resposta do servidor: %s", response) // Log para depuração
-
-	// Pequeno atraso antes de fechar a conexão
-	time.Sleep(100 * time.Millisecond)
 
 	return response, nil
 }
@@ -170,6 +189,13 @@ func getAvailableOperations() ([]string, error) {
 		return nil, err
 	}
 	defer conn.Close()
+
+	// Envia a mensagem inicial indicando que deseja obter as operações disponíveis
+	_, err = conn.Write([]byte("list\n"))
+	if err != nil {
+		log.Printf("Erro ao enviar mensagem inicial: %v", err)
+		return nil, err
+	}
 
 	// Lê as operações disponíveis do servidor
 	response, err := bufio.NewReader(conn).ReadString('\n')
@@ -184,4 +210,27 @@ func getAvailableOperations() ([]string, error) {
 	operations = append(operations, "5. Sair")
 
 	return operations, nil
+}
+
+func confirmRestart(menu *widgets.List, input *widgets.Paragraph, result *widgets.Paragraph, uiEvents <-chan ui.Event) {
+	confirm := widgets.NewParagraph()
+	confirm.Title = "Pressione Enter para continuar"
+	confirm.SetRect(0, 13, 50, 16)
+	confirm.TextStyle = ui.NewStyle(ui.ColorYellow)
+	ui.Render(confirm)
+
+	for {
+		e := <-uiEvents
+		if e.ID == "<Enter>" {
+			confirm.Text = ""
+			ui.Render(confirm)
+			break
+		}
+	}
+
+	// Reinicia o fluxo
+	input.Text = ""
+	result.Text = ""
+	menu.SelectedRow = 0
+	ui.Render(menu, input, result)
 }
