@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -11,17 +12,16 @@ import (
 func main() {
 	listener, err := net.Listen("tcp", "0.0.0.0:15000")
 	if err != nil {
-		fmt.Println("Erro ao iniciar o servidor:", err)
-		return
+		log.Fatalf("Erro ao iniciar o servidor: %v", err)
 	}
 	defer listener.Close()
 
-	fmt.Println("Servidor iniciado e ouvindo na porta 15000...")
+	log.Println("Servidor iniciado e ouvindo na porta 15000...")
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("Erro ao aceitar conexão:", err)
+			log.Printf("Erro ao aceitar conexão: %v", err)
 			continue
 		}
 		go handleConnection(conn)
@@ -38,7 +38,7 @@ func handleConnection(conn net.Conn) {
 	for {
 		request, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("Erro ao ler requisição:", err)
+			log.Printf("Erro ao ler requisição: %v", err)
 			return
 		}
 
@@ -50,6 +50,7 @@ func handleConnection(conn net.Conn) {
 		parts := strings.Split(request, " ")
 		if len(parts) < 2 {
 			conn.Write([]byte("Erro: Requisição inválida\n"))
+			log.Println("Requisição inválida recebida")
 			continue
 		}
 
@@ -58,6 +59,7 @@ func handleConnection(conn net.Conn) {
 
 		if len(numbers) > 20 {
 			conn.Write([]byte("Erro: Limite de 20 números excedido\n"))
+			log.Println("Limite de números excedido")
 			continue
 		}
 
@@ -74,15 +76,18 @@ func handleConnection(conn net.Conn) {
 			result, valid = divide(numbers)
 		default:
 			conn.Write([]byte("Erro: Operação inválida\n"))
+			log.Printf("Operação inválida recebida: %s", operation)
 			continue
 		}
 
 		if !valid {
 			conn.Write([]byte("Erro: Entrada inválida\n"))
+			log.Println("Entrada inválida recebida")
 			continue
 		}
 
 		conn.Write([]byte(fmt.Sprintf("Resultado: %.2f\n", result)))
+		log.Printf("Operação %s realizada com sucesso. Resultado: %.2f", operation, result)
 	}
 }
 
