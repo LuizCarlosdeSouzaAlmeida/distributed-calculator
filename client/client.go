@@ -30,7 +30,7 @@ func main() {
 	defer ui.Close()
 
 	menu, input, result := setupUI()
-	ui.Render(menu, input, result)
+	ui.Render(menu)
 
 	uiEvents := ui.PollEvents()
 
@@ -63,12 +63,12 @@ func setupUI() (*widgets.List, *widgets.Paragraph, *widgets.Paragraph) {
 	menu.Title = "Escolha uma operação"
 	menu.SetRect(0, 0, 25, 7)
 	menu.TextStyle = ui.NewStyle(ui.ColorWhite)
-	menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorGreen)
+	menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorMagenta)
 
 	input := widgets.NewParagraph()
 	input.Title = "Digite os números separados por espaço:"
 	input.SetRect(0, 7, 50, 10)
-	input.TextStyle = ui.NewStyle(ui.ColorGreen)
+	input.TextStyle = ui.NewStyle(ui.ColorMagenta)
 
 	result := widgets.NewParagraph()
 	result.Title = "Resultado"
@@ -81,6 +81,7 @@ func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.P
 	choice := menu.Rows[menu.SelectedRow]
 	if choice == "5. Sair" {
 		fmt.Println("Saindo...")
+		ui.Close()
 		return
 	}
 
@@ -97,7 +98,7 @@ func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.P
 		result.TextStyle = ui.NewStyle(ui.ColorRed)
 		result.Text = fmt.Sprintf("Erro ao enviar requisição: %v", err)
 	} else {
-		result.TextStyle = ui.NewStyle(ui.ColorGreen)
+		result.TextStyle = ui.NewStyle(ui.ColorWhite)
 		result.Text = res
 	}
 	ui.Render(result)
@@ -216,7 +217,8 @@ func confirmRestart(menu *widgets.List, input *widgets.Paragraph, result *widget
 	confirm := widgets.NewParagraph()
 	confirm.Title = "Pressione Enter para continuar"
 	confirm.SetRect(0, 13, 50, 16)
-	confirm.TextStyle = ui.NewStyle(ui.ColorYellow)
+	confirm.TitleStyle = ui.NewStyle(ui.ColorMagenta)
+	confirm.Border = false
 	ui.Render(confirm)
 
 	for {
@@ -232,5 +234,7 @@ func confirmRestart(menu *widgets.List, input *widgets.Paragraph, result *widget
 	input.Text = ""
 	result.Text = ""
 	menu.SelectedRow = 0
-	ui.Render(menu, input, result)
+	ui.Clear()
+	menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorMagenta)
+	ui.Render(menu)
 }
