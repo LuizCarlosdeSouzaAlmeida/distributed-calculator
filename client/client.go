@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"strings"
+	"time"
 	"unicode"
 
 	ui "github.com/gizak/termui/v3"
@@ -14,15 +16,8 @@ import (
 const serverIP = "3.225.60.216:15000"
 
 func main() {
-
-	if err := checkServerAvailability(); err != nil {
-		fmt.Printf("Erro ao verificar disponibilidade do servidor: %v", err)
-		return
-	}
-
 	if err := ui.Init(); err != nil {
-		fmt.Printf("Erro ao inicializar termui: %v", err)
-		return
+		log.Fatalf("Erro ao inicializar termui: %v", err)
 	}
 	defer ui.Close()
 
@@ -33,8 +28,7 @@ func main() {
 
 	operations, err := getAvailableOperations()
 	if err != nil {
-		fmt.Printf("Erro ao obter operações disponíveis: %v", err)
-		return
+		log.Fatalf("Erro ao obter operações disponíveis: %v", err)
 	}
 
 	menu.Rows = operations
@@ -102,7 +96,12 @@ func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.P
 }
 
 func getOperation(choice string) string {
-	return strings.Split(choice, " ")[0]
+	// Extrai o nome da operação a partir da escolha do usuário
+	parts := strings.Split(choice, " ")
+	if len(parts) < 2 {
+		return ""
+	}
+	return parts[1]
 }
 
 func getUserInput(input *widgets.Paragraph, uiEvents <-chan ui.Event) string {
@@ -140,18 +139,29 @@ func sendRequest(operation, numbers string) (string, error) {
 	}
 	defer conn.Close()
 
+	// Envia a operação e os números para o servidor
 	request := fmt.Sprintf("%s %s\n", operation, numbers)
 	_, err = conn.Write([]byte(request))
 	if err != nil {
 		return "", err
 	}
 
+	// Lê a resposta do servidor
 	response, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSpace(response), nil
+	// Remove o prefixo "Resultado: " da resposta
+	response = strings.TrimPrefix(response, "Resultado: ")
+	response = strings.TrimSpace(response)
+
+	log.Printf("Resposta do servidor: %s", response) // Log para depuração
+
+	// Pequeno atraso antes de fechar a conexão
+	time.Sleep(100 * time.Millisecond)
+
+	return response, nil
 }
 
 func getAvailableOperations() ([]string, error) {
@@ -161,6 +171,7 @@ func getAvailableOperations() ([]string, error) {
 	}
 	defer conn.Close()
 
+	// Lê as operações disponíveis do servidor
 	response, err := bufio.NewReader(conn).ReadString('\n')
 	if err != nil {
 		return nil, err
@@ -173,13 +184,4 @@ func getAvailableOperations() ([]string, error) {
 	operations = append(operations, "5. Sair")
 
 	return operations, nil
-}
-
-func checkServerAvailability() error {
-	conn, err := net.Dial("tcp", serverIP)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	return nil
 }
