@@ -18,6 +18,28 @@ func main() {
 	}
 	defer ui.Close()
 
+	menu, input, result := setupUI()
+	ui.Render(menu, input, result)
+
+	uiEvents := ui.PollEvents()
+
+	for {
+		e := <-uiEvents
+		switch e.ID {
+		case "q", "<C-c>":
+			return
+		case "j", "<Down>":
+			menu.ScrollDown()
+		case "k", "<Up>":
+			menu.ScrollUp()
+		case "<Enter>":
+			handleEnter(menu, input, result, uiEvents)
+		}
+		ui.Render(menu)
+	}
+}
+
+func setupUI() (*widgets.List, *widgets.Paragraph, *widgets.Paragraph) {
 	menu := widgets.NewList()
 	menu.Title = "Escolha uma operação"
 	menu.Rows = []string{
@@ -40,80 +62,75 @@ func main() {
 	result.Title = "Resultado"
 	result.SetRect(0, 10, 50, 13)
 
-	ui.Render(menu, input, result)
+	return menu, input, result
+}
 
-	uiEvents := ui.PollEvents()
+func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.Paragraph, uiEvents <-chan ui.Event) {
+	choice := menu.Rows[menu.SelectedRow]
+	if choice == "5. Sair" {
+		fmt.Println("Saindo...")
+		return
+	}
 
+	operation := getOperation(choice)
+	input.Text = ""
+	result.Text = ""
+	menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorWhite)
+	ui.Render(input, menu)
+
+	numbers := getUserInput(input, uiEvents)
+
+	res, err := sendRequest(operation, numbers)
+	if err != nil {
+		result.TextStyle = ui.NewStyle(ui.ColorRed)
+		result.Text = fmt.Sprintf("Erro ao enviar requisição: %v", err)
+	} else {
+		result.TextStyle = ui.NewStyle(ui.ColorGreen)
+		result.Text = res
+	}
+	ui.Render(result)
+}
+
+func getOperation(choice string) string {
+	switch choice {
+	case "1. Somar":
+		return "somar"
+	case "2. Subtrair":
+		return "subtrair"
+	case "3. Multiplicar":
+		return "multiplicar"
+	case "4. Dividir":
+		return "dividir"
+	default:
+		return ""
+	}
+}
+
+func getUserInput(input *widgets.Paragraph, uiEvents <-chan ui.Event) string {
 	for {
 		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			return
-		case "j", "<Down>":
-			menu.ScrollDown()
-		case "k", "<Up>":
-			menu.ScrollUp()
-		case "<Enter>":
-			choice := menu.Rows[menu.SelectedRow]
-			if choice == "5. Sair" {
-				fmt.Println("Saindo...")
-				return
-			}
-
-			operation := ""
-			switch choice {
-			case "1. Somar":
-				operation = "somar"
-			case "2. Subtrair":
-				operation = "subtrair"
-			case "3. Multiplicar":
-				operation = "multiplicar"
-			case "4. Dividir":
-				operation = "dividir"
-			}
-
-			input.Text = ""
-			result.Text = ""
-			menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorWhite)
-			ui.Render(input, menu)
-
-			numbers := ""
-			for {
-				e := <-uiEvents
-				if e.ID == "<Enter>" {
-					input.TextStyle = ui.NewStyle(ui.ColorWhite)
-					ui.Render(input)
-					break
-				}
-				if e.Type == ui.KeyboardEvent {
-					if e.ID == "<Space>" && !strings.HasSuffix(input.Text, " ") {
-						input.Text += " "
-					} else if e.ID == "<Backspace>" {
-						if len(input.Text) > 0 {
-							input.Text = input.Text[:len(input.Text)-1]
-						}
-					} else if len(e.ID) == 1 && (unicode.IsDigit(rune(e.ID[0])) || e.ID[0] == ' ') {
-						input.Text += e.ID
-					}
-					ui.Render(input)
-				}
-			}
-
+		if e.ID == "<Enter>" {
 			input.TextStyle = ui.NewStyle(ui.ColorWhite)
-			numbers = strings.TrimSpace(input.Text)
-			res, err := sendRequest(operation, numbers)
-			if err != nil {
-				result.TextStyle = ui.NewStyle(ui.ColorRed)
-				result.Text = fmt.Sprintf("Erro ao enviar requisição: %v", err)
-			} else {
-				result.TextStyle = ui.NewStyle(ui.ColorGreen)
-				result.Text = res
-			}
-			ui.Render(result)
+			ui.Render(input)
+			break
 		}
-		menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorGreen) // Verde enquanto selecionado
-		result.TextStyle = ui.NewStyle(ui.ColorWhite)
-		ui.Render(menu)
+		if e.Type == ui.KeyboardEvent {
+			handleKeyboardEvent(input, e)
+			ui.Render(input)
+		}
+	}
+	return strings.TrimSpace(input.Text)
+}
+
+func handleKeyboardEvent(input *widgets.Paragraph, e ui.Event) {
+	if e.ID == "<Space>" && !strings.HasSuffix(input.Text, " ") {
+		input.Text += " "
+	} else if e.ID == "<Backspace>" {
+		if len(input.Text) > 0 {
+			input.Text = input.Text[:len(input.Text)-1]
+		}
+	} else if len(e.ID) == 1 && (unicode.IsDigit(rune(e.ID[0])) || e.ID[0] == ' ') {
+		input.Text += e.ID
 	}
 }
 
