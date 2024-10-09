@@ -10,7 +10,8 @@ import (
 )
 
 func main() {
-	listener, err := net.Listen("tcp", "0.0.0.0:15000")
+	// Inicia o servidor e ouve na porta 15000
+	listener, err := startServer("0.0.0.0:15000")
 	if err != nil {
 		log.Fatalf("Erro ao iniciar o servidor: %v", err)
 	}
@@ -18,6 +19,7 @@ func main() {
 
 	log.Println("Servidor iniciado e ouvindo na porta 15000...")
 
+	// Loop principal para aceitar conexões
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -28,6 +30,16 @@ func main() {
 	}
 }
 
+// startServer inicia o servidor e retorna o listener
+func startServer(address string) (net.Listener, error) {
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		return nil, err
+	}
+	return listener, nil
+}
+
+// handleConnection lida com uma conexão individual
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 
@@ -45,17 +57,17 @@ func handleConnection(conn net.Conn) {
 	switch initialMessage {
 	case "list":
 		// Envia a lista de operações disponíveis
-		operations := []string{"somar", "subtrair", "multiplicar", "dividir"}
-		conn.Write([]byte(strings.Join(operations, ",") + "\n"))
+		sendOperationsList(conn)
 		return
 	case "operation":
 		// Continua para o processamento de operações
 	default:
-		conn.Write([]byte("Erro: Comando inicial inválido\n"))
+		sendError(conn, "Comando inicial inválido")
 		log.Printf("Comando inicial inválido recebido: %s", initialMessage)
 		return
 	}
 
+	// Loop para processar requisições
 	for {
 		request, err := reader.ReadString('\n')
 		if err != nil {
@@ -75,7 +87,7 @@ func handleConnection(conn net.Conn) {
 
 		parts := strings.Split(request, " ")
 		if len(parts) < 2 {
-			conn.Write([]byte("Erro: Requisição inválida\n"))
+			sendError(conn, "Requisição inválida")
 			log.Println("Requisição inválida recebida")
 			continue
 		}
@@ -84,7 +96,7 @@ func handleConnection(conn net.Conn) {
 		numbers := parts[1:]
 
 		if len(numbers) > 20 {
-			conn.Write([]byte("Erro: Limite de 20 números excedido\n"))
+			sendError(conn, "Limite de 20 números excedido")
 			log.Println("Limite de números excedido")
 			continue
 		}
@@ -101,22 +113,39 @@ func handleConnection(conn net.Conn) {
 		case "dividir":
 			result, valid = divide(numbers)
 		default:
-			conn.Write([]byte("Erro: Operação inválida\n"))
+			sendError(conn, "Operação inválida")
 			log.Printf("Operação inválida recebida: %s", operation)
 			continue
 		}
 
 		if !valid {
-			conn.Write([]byte("Erro: Entrada inválida\n"))
+			sendError(conn, "Entrada inválida")
 			log.Println("Entrada inválida recebida")
 			continue
 		}
 
-		conn.Write([]byte(fmt.Sprintf("Resultado: %.2f\n", result)))
+		sendResult(conn, result)
 		log.Printf("Operação %s realizada com sucesso. Resultado: %.2f", operation, result)
 	}
 }
 
+// sendOperationsList envia a lista de operações disponíveis para o cliente
+func sendOperationsList(conn net.Conn) {
+	operations := []string{"somar", "subtrair", "multiplicar", "dividir"}
+	conn.Write([]byte(strings.Join(operations, ",") + "\n"))
+}
+
+// sendError envia uma mensagem de erro para o cliente
+func sendError(conn net.Conn, message string) {
+	conn.Write([]byte(fmt.Sprintf("Erro: %s\n", message)))
+}
+
+// sendResult envia o resultado da operação para o cliente
+func sendResult(conn net.Conn, result float64) {
+	conn.Write([]byte(fmt.Sprintf("Resultado: %.2f\n", result)))
+}
+
+// sum realiza a soma dos números
 func sum(numbers []string) (float64, bool) {
 	var result float64
 	for _, num := range numbers {
@@ -129,6 +158,7 @@ func sum(numbers []string) (float64, bool) {
 	return result, true
 }
 
+// subtract realiza a subtração dos números
 func subtract(numbers []string) (float64, bool) {
 	var result float64
 	for i, num := range numbers {
@@ -145,6 +175,7 @@ func subtract(numbers []string) (float64, bool) {
 	return result, true
 }
 
+// multiply realiza a multiplicação dos números
 func multiply(numbers []string) (float64, bool) {
 	result := 1.0
 	for _, num := range numbers {
@@ -157,6 +188,7 @@ func multiply(numbers []string) (float64, bool) {
 	return result, true
 }
 
+// divide realiza a divisão dos números
 func divide(numbers []string) (float64, bool) {
 	var result float64
 	for i, num := range numbers {
