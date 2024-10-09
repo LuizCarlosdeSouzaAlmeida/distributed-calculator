@@ -21,27 +21,35 @@ func main() {
 	if err != nil {
 		log.Fatalf("Erro ao abrir o arquivo de log: %v", err)
 	}
-	defer logFile.Close()
+	defer func() {
+		logFile.Close()
+		ui.Close()
+	}()
 	log.SetOutput(logFile)
 
-	if err := ui.Init(); err != nil {
-		log.Fatalf("Erro ao inicializar termui: %v", err)
+	// Inicializa a interface do usuário
+	if err := initUI(); err != nil {
+		log.Fatalf("Erro ao inicializar a interface do usuário: %v", err)
 	}
-	defer ui.Close()
 
+	// Configura a interface do usuário
 	menu, input, result := setupUI()
 	ui.Render(menu)
 
+	// Obtém os eventos da interface do usuário
 	uiEvents := ui.PollEvents()
 
+	// Obtém as operações disponíveis do servidor
 	operations, err := getAvailableOperations()
 	if err != nil {
 		log.Fatalf("Erro ao obter operações disponíveis: %v", err)
 	}
 
+	// Define as operações no menu e renderiza
 	menu.Rows = operations
 	ui.Render(menu)
 
+	// Loop principal para lidar com eventos da interface do usuário
 	for {
 		e := <-uiEvents
 		switch e.ID {
@@ -58,6 +66,15 @@ func main() {
 	}
 }
 
+// initUI inicializa a interface do usuário
+func initUI() error {
+	if err := ui.Init(); err != nil {
+		return fmt.Errorf("erro ao inicializar termui: %v", err)
+	}
+	return nil
+}
+
+// setupUI configura os widgets da interface do usuário
 func setupUI() (*widgets.List, *widgets.Paragraph, *widgets.Paragraph) {
 	menu := widgets.NewList()
 	menu.Title = "Escolha uma operação"
@@ -77,6 +94,7 @@ func setupUI() (*widgets.List, *widgets.Paragraph, *widgets.Paragraph) {
 	return menu, input, result
 }
 
+// handleEnter lida com o evento de pressionar Enter
 func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.Paragraph, uiEvents <-chan ui.Event) {
 	choice := menu.Rows[menu.SelectedRow]
 	if choice == "5. Sair" {
@@ -107,8 +125,8 @@ func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.P
 	confirmRestart(menu, input, result, uiEvents)
 }
 
+// getOperation extrai o nome da operação a partir da escolha do usuário
 func getOperation(choice string) string {
-	// Extrai o nome da operação a partir da escolha do usuário
 	parts := strings.Split(choice, " ")
 	if len(parts) < 2 {
 		return ""
@@ -116,6 +134,7 @@ func getOperation(choice string) string {
 	return parts[1]
 }
 
+// getUserInput obtém a entrada do usuário
 func getUserInput(input *widgets.Paragraph, uiEvents <-chan ui.Event) string {
 	for {
 		e := <-uiEvents
@@ -132,6 +151,7 @@ func getUserInput(input *widgets.Paragraph, uiEvents <-chan ui.Event) string {
 	return strings.TrimSpace(input.Text)
 }
 
+// handleKeyboardEvent lida com eventos de teclado
 func handleKeyboardEvent(input *widgets.Paragraph, e ui.Event) {
 	if e.ID == "<Space>" && !strings.HasSuffix(input.Text, " ") {
 		input.Text += " "
@@ -144,6 +164,7 @@ func handleKeyboardEvent(input *widgets.Paragraph, e ui.Event) {
 	}
 }
 
+// sendRequest envia uma requisição para o servidor
 func sendRequest(operation, numbers string) (string, error) {
 	conn, err := net.Dial("tcp", serverIP)
 	if err != nil {
@@ -184,6 +205,7 @@ func sendRequest(operation, numbers string) (string, error) {
 	return response, nil
 }
 
+// getAvailableOperations obtém as operações disponíveis do servidor
 func getAvailableOperations() ([]string, error) {
 	conn, err := net.Dial("tcp", serverIP)
 	if err != nil {
@@ -213,6 +235,7 @@ func getAvailableOperations() ([]string, error) {
 	return operations, nil
 }
 
+// confirmRestart aguarda a confirmação do usuário antes de reiniciar o fluxo
 func confirmRestart(menu *widgets.List, input *widgets.Paragraph, result *widgets.Paragraph, uiEvents <-chan ui.Event) {
 	confirm := widgets.NewParagraph()
 	confirm.Title = "Pressione Enter para continuar"
