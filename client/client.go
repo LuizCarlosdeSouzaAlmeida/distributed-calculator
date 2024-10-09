@@ -14,6 +14,12 @@ import (
 const serverIP = "3.225.60.216:15000"
 
 func main() {
+
+	if err := checkServerAvailability(); err != nil {
+		fmt.Printf("Erro ao verificar disponibilidade do servidor: %v", err)
+		return
+	}
+
 	if err := ui.Init(); err != nil {
 		fmt.Printf("Erro ao inicializar termui: %v", err)
 		return
@@ -167,4 +173,13 @@ func getAvailableOperations() ([]string, error) {
 	operations = append(operations, "5. Sair")
 
 	return operations, nil
+}
+
+func checkServerAvailability() error {
+	conn, err := net.Dial("tcp", serverIP)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	return nil
 }
