@@ -110,8 +110,9 @@ const serverIP = "localhost:15000"
 
 ## Considerações Finais
 
-- Certifique-se de que o servidor esteja em execução antes de iniciar o cliente.
-- O cliente se conecta ao servidor no endereço definido na constante `serverIP`. Se o servidor estiver em execução localmente, você pode modificar o endereço no código do cliente para `localhost:15000`.
+- **Execução do Servidor**: Certifique-se de que o servidor esteja em execução antes de iniciar o cliente.
+- **Configuração do IP**: O cliente se conecta ao servidor no endereço definido na constante `serverIP`. Se o servidor estiver em execução localmente, você pode modificar o endereço no código do cliente para `localhost:15000`.
+- **Limitações**: O servidor suporta até 20 números por operação.
 
 ## Contribuição
 
