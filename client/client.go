@@ -23,6 +23,15 @@ func main() {
 
 	uiEvents := ui.PollEvents()
 
+	operations, err := getAvailableOperations()
+	if err != nil {
+		fmt.Printf("Erro ao obter operações disponíveis: %v", err)
+		return
+	}
+
+	menu.Rows = operations
+	ui.Render(menu)
+
 	for {
 		e := <-uiEvents
 		switch e.ID {
@@ -42,13 +51,6 @@ func main() {
 func setupUI() (*widgets.List, *widgets.Paragraph, *widgets.Paragraph) {
 	menu := widgets.NewList()
 	menu.Title = "Escolha uma operação"
-	menu.Rows = []string{
-		"1. Somar",
-		"2. Subtrair",
-		"3. Multiplicar",
-		"4. Dividir",
-		"5. Sair",
-	}
 	menu.SetRect(0, 0, 25, 7)
 	menu.TextStyle = ui.NewStyle(ui.ColorWhite)
 	menu.SelectedRowStyle = ui.NewStyle(ui.ColorBlack, ui.ColorGreen)
@@ -92,18 +94,7 @@ func handleEnter(menu *widgets.List, input *widgets.Paragraph, result *widgets.P
 }
 
 func getOperation(choice string) string {
-	switch choice {
-	case "1. Somar":
-		return "somar"
-	case "2. Subtrair":
-		return "subtrair"
-	case "3. Multiplicar":
-		return "multiplicar"
-	case "4. Dividir":
-		return "dividir"
-	default:
-		return ""
-	}
+	return strings.Split(choice, " ")[0]
 }
 
 func getUserInput(input *widgets.Paragraph, uiEvents <-chan ui.Event) string {
@@ -153,4 +144,25 @@ func sendRequest(operation, numbers string) (string, error) {
 	}
 
 	return strings.TrimSpace(response), nil
+}
+
+func getAvailableOperations() ([]string, error) {
+	conn, err := net.Dial("tcp", "18.208.231.110:15000")
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	response, err := bufio.NewReader(conn).ReadString('\n')
+	if err != nil {
+		return nil, err
+	}
+
+	operations := strings.Split(strings.TrimSpace(response), ",")
+	for i, op := range operations {
+		operations[i] = fmt.Sprintf("%d. %s", i+1, op)
+	}
+	operations = append(operations, "5. Sair")
+
+	return operations, nil
 }
