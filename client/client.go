@@ -11,6 +11,8 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 )
 
+const serverIP = "3.225.60.216:15000"
+
 func main() {
 	if err := ui.Init(); err != nil {
 		fmt.Printf("Erro ao inicializar termui: %v", err)
@@ -126,7 +128,7 @@ func handleKeyboardEvent(input *widgets.Paragraph, e ui.Event) {
 }
 
 func sendRequest(operation, numbers string) (string, error) {
-	conn, err := net.Dial("tcp", "18.208.231.110:15000")
+	conn, err := net.Dial("tcp", serverIP)
 	if err != nil {
 		return "", err
 	}
@@ -147,7 +149,7 @@ func sendRequest(operation, numbers string) (string, error) {
 }
 
 func getAvailableOperations() ([]string, error) {
-	conn, err := net.Dial("tcp", "18.208.231.110:15000")
+	conn, err := net.Dial("tcp", serverIP)
 	if err != nil {
 		return nil, err
 	}
