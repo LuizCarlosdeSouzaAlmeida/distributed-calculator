@@ -1,4 +1,4 @@
-# Distributed Calculator
+# Sockets Distributed Calculator
 
 Este projeto consiste em um sistema distribuído de calculadora, onde o servidor processa operações matemáticas básicas (soma, subtração, multiplicação e divisão) e o cliente se conecta ao servidor para realizar essas operações. O cliente obtém as operações disponíveis diretamente do servidor, garantindo que as informações sejam sempre atualizadas.
 
